@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Form, redirect } from "react-router-dom";
+import { Form, redirect, useActionData, useNavigation } from "react-router-dom";
 import { createOrder } from "../../services/apiRestaurant";
 
 // https://uibakery.io/regex-library/phone-number
@@ -33,7 +32,10 @@ const fakeCart = [
 ];
 
 function CreateOrder() {
-  // const [withPriority, setWithPriority] = useState(false);
+  const navigation = useNavigation();
+  const formErrors = useActionData(); // Captures errors returned by action()
+  const isSubmitting = navigation.state === "submitting";
+
   const cart = fakeCart;
 
   return (
@@ -51,6 +53,10 @@ function CreateOrder() {
           <div>
             <input type="tel" name="phone" required />
           </div>
+          {/* Render phone validation error */}
+          {formErrors?.phone && (
+            <p style={{ color: "red" }}>{formErrors.phone}</p>
+          )}
         </div>
 
         <div>
@@ -61,19 +67,15 @@ function CreateOrder() {
         </div>
 
         <div>
-          <input
-            type="checkbox"
-            name="priority"
-            id="priority"
-            // value={withPriority}
-            // onChange={(e) => setWithPriority(e.target.checked)}
-          />
-          <label htmlFor="priority">Want to yo give your order priority?</label>
+          <input type="checkbox" name="priority" id="priority" />
+          <label htmlFor="priority">Want to give your order priority?</label>
         </div>
 
         <div>
           <input type="hidden" name="cart" value={JSON.stringify(cart)} />
-          <button>Order now</button>
+          <button disabled={isSubmitting}>
+            {isSubmitting ? "Placing order..." : "Order now"}
+          </button>
         </div>
       </Form>
     </div>
@@ -81,23 +83,28 @@ function CreateOrder() {
 }
 
 export async function action({ request }) {
-  console.log(`in the action `);
   const formData = await request.formData();
   const data = Object.fromEntries(formData);
-  console.log(formData);
 
-  //normalise the data
   const order = {
     ...data,
     cart: JSON.parse(data.cart),
-    priority: data.priority === "on", // bool
+    priority: data.priority === "on",
   };
-  // send the POST
-  console.log(order);
-  const resp = await createOrder(order);
-  console.log(resp);
-  // redicrect to the new Order page
-  return redirect(`/order/${resp.id}`);
-  return null;
+
+  // 1. Phone number validation
+  const errors = {};
+  if (!isValidPhone(order.phone)) {
+    errors.phone =
+      "Please give us a valid phone number. We might need it to contact you.";
+  }
+
+  // Return errors object if validation fails (caught by useActionData)
+  if (Object.keys(errors).length > 0) return errors;
+
+  // 2. API call & redirection
+  const newOrder = await createOrder(order);
+  return redirect(`/order/${newOrder.id}`);
 }
+
 export default CreateOrder;

@@ -2,6 +2,7 @@ import { Outlet, useNavigation } from "react-router-dom";
 import CartOverview from "../features/cart/CartOverview";
 import Header from "./Header";
 import LoaderComponent from "./LoaderComponent";
+import SearchOrder from "../features/order/SearchOrder";
 
 function AppLayout() {
   const navi = useNavigation();
@@ -14,6 +15,7 @@ function AppLayout() {
           only the components go away */}
       {loading && <LoaderComponent />}
       <Header />
+
       <main>
         <Outlet />
       </main>
